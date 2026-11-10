@@ -19,6 +19,23 @@ Measured on 2 million synthetic sales rows where one store holds ~40% of the dat
 
 > Honest note: these runs used a single-core machine. File counts, bytes read, and partition sizes are hardware-independent, but timings are not. Salting, for example, is slightly *slower* on one core (the work is the same, just split up) and only pays off on a cluster where many cores would otherwise sit idle waiting for the one overloaded task. Re-run the lab on your own cluster for representative timings.
 
+## Re-run on a 4-core machine
+
+The results above came from a single-core machine. I re-ran the full lab on a 4-core GitHub Actions runner using the on-demand [Benchmark workflow](.github/workflows/benchmark.yml). Full output: [`results/RESULTS_github_actions.md`](results/RESULTS_github_actions.md).
+
+| Optimization | 1 core | 4 cores |
+|---|---|---|
+| Broadcast join | 1.83s → 0.59s (68% faster) | 0.70s → 0.22s (69% faster) |
+| AQE coalescing | 12.6s → 1.34s, 1 output file | 5.62s → 0.56s (90% faster), 4 output files |
+| Partition pruning | 0.42s → 0.15s (64% faster) | 0.27s → 0.06s (78% faster) |
+| Compaction | 1.06s → 0.26s (75% faster) | 0.41s → 0.13s (68% faster) |
+| Salting (join time) | 2.14s → 2.66s (slower) | 0.95s → 0.96s (no change) |
+
+What I took away from it:
+
+- **AQE kept 4 files instead of 1** because by default it won't merge below the number of cores, so it keeps one partition per core for parallelism.
+- **Salting still didn't make the join faster.** At 2 million rows, even the overloaded partition finishes in under a second, so the extra rows salting creates cost about as much as the skew saves. The fix clearly works on partition sizes (skew ratio 11.6x → 1.5x), but the time savings only show up at real scale, when one straggler task runs for minutes while the other cores sit idle.
+
 ## How each experiment works
 
 ```mermaid
