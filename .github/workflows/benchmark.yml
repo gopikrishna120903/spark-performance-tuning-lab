@@ -13,12 +13,12 @@ jobs:
     env:
       USE_DELTA: "0"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
@@ -28,7 +28,7 @@ jobs:
         run: nproc && free -h
       - name: Run experiments
         run: PYTHONPATH=src python -m perf_lab.experiments --rows ${{ inputs.rows }} --out benchmark-results
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: benchmark-results
           path: benchmark-results/
